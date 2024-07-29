@@ -1,0 +1,53 @@
+{
+  "Comment": "Transcribe Pipeline",
+  "StartAt": "S3 object keys",
+  "States": {
+    "S3 object keys": {
+      "Type": "Map",
+      "ItemProcessor": {
+        "ProcessorConfig": {
+          "Mode": "DISTRIBUTED",
+          "ExecutionType": "STANDARD"
+        },
+        "StartAt": "Transcriber",
+        "States": {
+          "Transcriber": {
+            "Type": "Task",
+            "Resource": "arn:aws:states:::lambda:invoke",
+            "OutputPath": "$.Payload",
+            "Parameters": {
+              "FunctionName": "arn:aws:lambda:${AWS_DEFAULT_REGION}:${AWS_ACCT_ID}:function:transcriber:$LATEST",
+              "Payload.$": "$"
+            },
+            "Retry": [
+              {
+                "ErrorEquals": [
+                  "Lambda.ServiceException",
+                  "Lambda.AWSLambdaException",
+                  "Lambda.SdkClientException",
+                  "Lambda.TooManyRequestsException"
+                ],
+                "IntervalSeconds": 1,
+                "MaxAttempts": 3,
+                "BackoffRate": 2
+              }
+            ],
+            "End": true
+          }
+        }
+      },
+      "ItemReader": {
+        "Resource": "arn:aws:states:::s3:listObjectsV2",
+        "Parameters": {
+          "Bucket": "${VIDEO_BUCKET}"
+        }
+      },
+      "MaxConcurrency": 20,
+      "Label": "S3objectkeys",
+      "End": true,
+      "ItemBatcher": {
+        "MaxItemsPerBatch": 5
+      }
+    }
+  }
+}
