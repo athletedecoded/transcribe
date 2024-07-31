@@ -1,5 +1,4 @@
 include ../../.env
-SM_DEFINITION := $(shell jq -c . < statemachine.json)
 
 format:
 	cargo fmt --quiet
@@ -7,7 +6,7 @@ format:
 lint:
 	cargo clippy --quiet
 
-build-image:
+image:
 	docker build --platform linux/amd64 -t transcriber .
 
 ecr-login:
@@ -25,18 +24,32 @@ deploy-lambda:
 		--profile transcribe-lambda-dev \
 		--region ${AWS_DEFAULT_REGION} \
 		--function-name transcriber \
-		--timeout 90 \
+		--timeout 300 \
+		--memory-size 5000 \
+		--ephemeral-storage Size=5000 \
+		--environment Variables="{VIDEO_BUCKET=${VIDEO_BUCKET},TRANSCRIPT_BUCKET=${TRANSCRIPT_BUCKET}}" \
 		--package-type Image \
 		--code ImageUri=${AWS_ACCT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/transcriber:latest \
 		--role arn:aws:iam::${AWS_ACCT_ID}:role/transcriber-fxn-role \
 		> /dev/null
 
-update-lambda:
+update-lambda-code:
 	aws lambda update-function-code \
 		--profile transcribe-lambda-dev \
 		--region ${AWS_DEFAULT_REGION} \
 		--function-name transcriber \
 		--image-uri ${AWS_ACCT_ID}.dkr.ecr.${AWS_DEFAULT_REGION}.amazonaws.com/transcriber:latest \
+		> /dev/null
+
+update-lambda-config:
+	aws lambda update-function-configuration \
+		--profile transcribe-lambda-dev \
+		--region ${AWS_DEFAULT_REGION} \
+		--function-name transcriber \
+		--timeout 300 \
+		--memory-size 5000 \
+		--ephemeral-storage Size=5000 \
+		--environment Variables="{VIDEO_BUCKET=${VIDEO_BUCKET},TRANSCRIPT_BUCKET=${TRANSCRIPT_BUCKET}}" \
 		> /dev/null
 
 install-emulator:
@@ -46,4 +59,5 @@ install-emulator:
     chmod +x ~/.aws-lambda-rie/aws-lambda-rie
 
 local-container:
-	docker run --env-file .env -d -p 9000:8080 --entrypoint /usr/local/bin/aws-lambda-rie $transcriber:latest transcriber
+	# Mount local env vars and aws creds to mimic deployment behaviour
+	docker run --env-file ../../.env -v ~/.aws:/root/.aws -e AWS_REGION=${AWS_DEFAULT_REGION} -e AWS_PROFILE=default -d -p 9000:8080 --entrypoint /usr/local/bin/aws-lambda-rie transcriber:latest transcriber

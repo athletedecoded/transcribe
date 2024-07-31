@@ -1,5 +1,6 @@
 use aws_sdk_s3::{Client, Error};
 use aws_config::BehaviorVersion;
+use aws_sdk_s3::primitives::ByteStream;
 use tokio::fs::{File, create_dir_all};
 use tokio::io::copy;
 use std::path::Path;
@@ -24,4 +25,30 @@ pub async fn get_video(client: &Client, bucket: &str, key: &str) -> Result<(), E
     // Write the video data into the file
     let _file_msg = copy(&mut stream, &mut tmp_file).await.unwrap();
     Ok(())
+}
+
+pub async fn put_transcript(client: &Client, bucket: &str, filepath: &Path) -> Result<String, Error> {
+    let stream = ByteStream::from_path(filepath).await;
+    let path_str = filepath.display().to_string();
+    let key = path_str.strip_prefix("/tmp/transcripts/").unwrap();
+    match stream {
+        Ok(body) => {
+            match client.put_object()
+                .bucket(bucket)
+                .key(key)
+                .body(body)
+                .send()
+                .await {
+                    Ok(_) => {
+                        Ok(format!("SUCCESS: Uploaded to S3 {}", key))
+                    }
+                    Err(e) => {
+                        Ok(format!("ERROR: Failed to upload {}", e))
+                }
+            }
+        }
+        Err(e) => {
+            Ok(format!("ERROR: Failed to extract bytestream from {}, {}", key, e))
+        }
+    }
 }

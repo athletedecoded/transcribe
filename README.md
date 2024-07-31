@@ -16,8 +16,9 @@ Jump To:
 * [Configure Listener Trigger](#configure-listener-trigger)
 * [Build Transcribe Binary](#build-transcribe-binary)
 * [Run E2E Transcription Pipeline](#run-e2e-transcription-pipeline)
-* [Testing](#testing)
-* [Gotchas & Debugging](#gotchas--debugging)
+* [Testing & Debugging](#testing--debugging)
+* [Memory Management](#memory-management)
+* [Modifying & Updating](#modifying--updating)
 
 ### PreReqs
 
@@ -184,7 +185,7 @@ aws_secret_access_key=<TRANSCRIBE_LAMBDA_DEVELOPER_SECRET_KEY>
 
 ```
 # cd lambda-fxns/transcriber
-$ make build-image
+$ make image
 ```
 
 **Push Container Image to ECR**
@@ -260,7 +261,7 @@ path/to/vid_dir/
         ...
 ```
 
-### Testing
+### Testing & Debugging
 
 **Run unit tests**
 
@@ -268,8 +269,6 @@ path/to/vid_dir/
 # cd transcribe
 $ make tests
 ```
-
-### Gotchas & Debugging
 
 **Test transcriber image locally**
 
@@ -280,8 +279,58 @@ $ make install-emulator
 # Launch container on emulator
 $ make local-container
 
-# Send test payload using curl
-$ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{TEST PAYLOAD}'
+# Send sample payload using curl i.e.
+$ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" -d '{
+  "Items": [
+    {
+      "Etag": "\"d41d8cd98f00b204e9800998ecf8427e\"",
+      "Key": "done.txt",
+      "LastModified": 1722541000,
+      "Size": 0,
+      "StorageClass": "STANDARD"
+    },
+    {
+      "Etag": "\"d9221b8cfeaae16e0d50dd70369e15e1\"",
+      "Key": "week1/lesson1/video1.mp4",
+      "LastModified": 1722540936,
+      "Size": 156222084,
+      "StorageClass": "STANDARD"
+    },
+    {
+      "Etag": "\"d9221b8cfeaae16e0d50dd70369e15e1\"",
+      "Key": "week2/lesson1/video1.mp4",
+      "LastModified": 1722540968,
+      "Size": 156222084,
+      "StorageClass": "STANDARD"
+    }
+  ]
+}'
+```
+
+### Memory Management
+
+The current lambda configuration is set to 5GB CPU + 5GB ephemeral /tmp storage + batch size of 5. This allows for 
+1GB CPU and storage per video. To optimize cost vs. performance, modify CPU/storage/batchsize according to pipeline demands.  
+
+NB: If you encounter mutex/broken pipe/early termination/incomplete transcription errors in deployment (but not when 
+testing the transcriber image locally) try increase the CPU memory and/or ephemeral /tmp storage.
+
+### Modifying & Updating
+
+**Transcriber Function Code**
+
+```
+# modify /lambda-fxns/transcriber/src/*
+$ make image
+$ make ecr-login
+$ make ecr-push
+$ make update-lambda-code
+```
+
+**Transcriber Function Configuration**
+
+```
+$ make update-lambda-config
 ```
 
 ### To Do
@@ -291,5 +340,6 @@ $ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" 
 ### References
 * [Deploying Lambda Containers](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html)
 * [Lambda Runtime Emulator](https://github.com/aws/aws-lambda-runtime-interface-emulator)
+* [FFMpeg Static Builds](https://johnvansickle.com/ffmpeg/)
 * [AWS S3 x Lambda Example](https://docs.aws.amazon.com/lambda/latest/dg/with-s3-example.html#with-s3-example-create-bucket)
 * [Cargo Lambda Docs](https://www.cargo-lambda.info/)
