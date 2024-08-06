@@ -5,6 +5,13 @@ use tokio::fs::{File, create_dir_all};
 use tokio::io::copy;
 use std::path::Path;
 
+
+pub struct PutResponse {
+    pub key: String,
+    pub status: i32,
+    pub message: String
+}
+
 // Create S3 client
 pub async fn init_s3client() -> Result<Client, Error> {
     let config = aws_config::load_defaults(BehaviorVersion::latest()).await;
@@ -27,7 +34,7 @@ pub async fn get_video(client: &Client, bucket: &str, key: &str) -> Result<(), E
     Ok(())
 }
 
-pub async fn put_transcript(client: &Client, bucket: &str, filepath: &Path) -> Result<String, Error> {
+pub async fn put_transcript(client: &Client, bucket: &str, filepath: &Path) -> Result<PutResponse, Error> {
     let stream = ByteStream::from_path(filepath).await;
     let path_str = filepath.display().to_string();
     let key = path_str.strip_prefix("/tmp/transcripts/").unwrap();
@@ -40,15 +47,27 @@ pub async fn put_transcript(client: &Client, bucket: &str, filepath: &Path) -> R
                 .send()
                 .await {
                     Ok(_) => {
-                        Ok(format!("SUCCESS: Uploaded to S3 {}", key))
+                        Ok(PutResponse {
+                            key: key.to_string(),
+                            status: 200,
+                            message: format!("SUCCESS: S3 upload {}", key)
+                        })
                     }
                     Err(e) => {
-                        Ok(format!("ERROR: Failed to upload {}", e))
+                        Ok(PutResponse {
+                            key: key.to_string(),
+                            status: 400,
+                            message: format!("ERROR: Failed S3 upload {} : {}", key, e)
+                        })
                 }
             }
         }
         Err(e) => {
-            Ok(format!("ERROR: Failed to extract bytestream from {}, {}", key, e))
+            Ok(PutResponse {
+                key: key.to_string(),
+                status: 400,
+                message: format!("ERROR: Failed to extract bytestream from {}, {}", key, e)
+            })
         }
     }
 }

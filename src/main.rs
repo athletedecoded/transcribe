@@ -52,7 +52,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 let key = match extract_key(&vid_path).await {
                     Some(key) => key,
                     None => {
-                        // TODO: handle failed key extraction
                         println!("ERROR: Failed to extract key from {}", vid_path.display());
                         break;
                     }
@@ -61,7 +60,6 @@ async fn main() -> Result<(), Box<dyn Error>> {
                 match upload_object(&s3client, &vid_bucket, &vid_path, &key).await {
                     Ok(_) => println!("SUCCESS: uploaded {}", vid_path.display()),
                     Err(e) => {
-                        // TODO: handle failed upload
                         println!("ERROR: Failed to upload {}. {}", vid_path.display(), e);
                     }
                 }

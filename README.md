@@ -1,26 +1,22 @@
-# AWS Transcriber
+# Transcribe
 
-Pipeline to transcribe videos using S3 x Lambda x Whisper.cpp
+Serverless E2E pipeline to transcribe videos using Rust x AWS x Whisper.cpp
 
 ![image](assets/whisper-arch-v0.png)
 
-Jump To:
-* [PreReqs](#prereqs)
-* [Provision S3 Resources](#provision-s3-resources)
-* [Configure Env Vars](#configure-env-vars)
-* [Configure Roles & Permissions](#configure-roles--permissions)
-* [Configure Local AWS Credentials](#configure-local-aws-credentials)
-* [Deploy Transcriber Function](#deploy-transcriber-function)
-* [Configure Step Function](#configure-step-function)
-* [Deploy Listener Function](#deploy-listener-function)
-* [Configure Listener Trigger](#configure-listener-trigger)
-* [Build Transcribe Binary](#build-transcribe-binary)
-* [Run E2E Transcription Pipeline](#run-e2e-transcription-pipeline)
-* [Testing & Debugging](#testing--debugging)
-* [Memory Management](#memory-management)
-* [Modifying & Updating](#modifying--updating)
+The pipeline consists of 3 core elements:
+1. Rust CLI Tool to upload video directory from local to S3
+2. Serverless transcription pipeline (S3 + Lambda + Step Functions)
+3. CI/CD Pipeline (CodeBuild + CodePipeline)
 
-### PreReqs
+## Getting Started
+
+**Install Rust via [rustup](https://rustup.rs/)**
+
+```
+$ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
+$ source "$HOME/.cargo/env"
+```
 
 **Install AWS CLI v2**
 
@@ -36,13 +32,38 @@ $ unzip awscliv2.zip
 $ sudo ./aws/install
 ```
 
+**Clone Repo**
+
+```
+$ git clone https://github.com/athletedecoded/transcribe.git
+```
+
 **Install cargo-lambda**
 
 ```
+# cd transcribe
 $ make cargo-lambda
 ```
 
+## Developer Docs
+
 ⚠️ Ensure all resources are provisioned in the same AWS region ⚠️
+
+Jump To:
+* [Provision S3 Resources](#provision-s3-resources)
+* [Configure Env Vars](#configure-env-vars)
+* [Configure Roles & Permissions](#configure-roles--permissions)
+* [Configure Local AWS Credentials](#configure-local-aws-credentials)
+* [Deploy Transcriber Function](#deploy-transcriber-function)
+* [Configure Step Function](#configure-step-function)
+* [Deploy Listener Function](#deploy-listener-function)
+* [Configure Listener Trigger](#configure-listener-trigger)
+* [Build Transcribe Binary](#build-transcribe-binary)
+* [Run E2E Transcription Pipeline](#run-e2e-transcription-pipeline)
+* [Testing & Debugging](#testing--debugging)
+* [Transcriber Memory Management](#transcriber-memory-management)
+* [Modifying & Updating Transcriber Pipeline](#modifying--updating-transcriber)
+
 
 ### Provision S3 Resources
 
@@ -52,7 +73,7 @@ NB: Buckets must adhere to global naming rules
 
 ### Configure env vars
 
-Create a `.env` file and add AWS account ID and bucket variable values
+Create a `.env` file in root and add AWS account ID, default region, and bucket variable values
 
 ```
 # .env
@@ -307,15 +328,15 @@ $ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" 
 }'
 ```
 
-### Memory Management
+### Transcriber Memory Management
 
-The current lambda configuration is set to 5GB CPU + 5GB ephemeral /tmp storage + batch size of 5. This allows for 
+The current transcriber function configuration is set to 5GB CPU + 5GB ephemeral /tmp storage + batch size of 5. This allows for 
 1GB CPU and storage per video. To optimize cost vs. performance, modify CPU/storage/batchsize according to pipeline demands.  
 
 NB: If you encounter mutex/broken pipe/early termination/incomplete transcription errors in deployment (but not when 
 testing the transcriber image locally) try increase the CPU memory and/or ephemeral /tmp storage.
 
-### Modifying & Updating
+### Modifying & Updating Transcriber
 
 **Transcriber Function Code**
 
@@ -336,6 +357,7 @@ $ make update-lambda-config
 ### To Do
 
 * [ ] Parallelize file ops w/ Rayon
+* [ ] Reattempt failed files
 
 ### References
 * [Deploying Lambda Containers](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html)

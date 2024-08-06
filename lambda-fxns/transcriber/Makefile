@@ -1,4 +1,10 @@
-include ../../.env
+# Default to development environment
+ENV ?= dev
+
+# If dev env, load from root/.env
+ifeq ($(ENV),dev)
+    include ../../.env
+endif
 
 format:
 	cargo fmt --quiet

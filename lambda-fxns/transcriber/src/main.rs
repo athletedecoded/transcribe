@@ -25,12 +25,12 @@ struct S3Items {
 }
 
 #[derive(Serialize)]
-struct Response {
+struct LambdaResponse {
     message: String,
 }
 
 
-async fn function_handler(event: LambdaEvent<S3Items>) -> Result<Response, Error> {
+async fn function_handler(event: LambdaEvent<S3Items>) -> Result<LambdaResponse, Error> {
     // Init S3 client
     let s3client = init_s3client().await.unwrap();
     // Env Vars
@@ -59,7 +59,7 @@ async fn function_handler(event: LambdaEvent<S3Items>) -> Result<Response, Error
                 tracing::info!("Found video: {}", video_path.display());
             },
             Err(e) => {
-                println!("Failed to read glob entry. {}", e)
+                tracing::info!("Failed to read glob entry. {}", e)
             }
         }
     }
@@ -78,13 +78,20 @@ async fn function_handler(event: LambdaEvent<S3Items>) -> Result<Response, Error
 
     // Get /tmp/transcripts/ paths
     let glob_pattern = "/tmp/transcripts/**/video*.txt".to_string();
+    let mut processed_transcripts: Vec<String> = vec![];
+    let mut failed_transcripts: Vec<String> = vec![];
     for entry in glob(&glob_pattern).expect("ERROR: Failed to glob *.txt files") {
         match entry {
             Ok(tscript_path) => {
                 // Upload to S3
                 match put_transcript(&s3client, &tscript_bucket, &tscript_path).await {
                     Ok(resp) => {
-                        tracing::info!("{}", resp);
+                        match resp.status {
+                            200 => processed_transcripts.push(resp.key),
+                            400 => failed_transcripts.push(resp.key),
+                            _ => tracing::info!("ERROR: Unknown status for PutResponse")
+                        }
+                        tracing::info!("{}", resp.message);
                     },
                     Err(e) => {
                         tracing::error!("ERROR: {}", e);
@@ -92,14 +99,14 @@ async fn function_handler(event: LambdaEvent<S3Items>) -> Result<Response, Error
                 }
             }
             Err(e) => {
-                println!("Failed to read glob entry. {}", e)
+                tracing::info!("Failed to read glob entry. {}", e)
             }
         }
     }
 
     // Prepare the response
-    let resp = Response {
-        message: "SUCCESS: Files processed".to_string()
+    let resp = LambdaResponse {
+        message: format!("DONE! Transcripts available in S3 Bucket: {}\n Processed Transcripts: {:?}\n Failed Transcripts: {:?}", tscript_bucket, processed_transcripts, failed_transcripts)
     };
 
     // Return `Response` (it will be serialized to JSON automatically by the runtime)
