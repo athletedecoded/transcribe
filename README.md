@@ -1,17 +1,21 @@
 # Transcribe
 
-Serverless E2E pipeline to transcribe videos using Rust x AWS x Whisper.cpp
+Serverless E2E workflow to transcribe videos using Rust x AWS x Whisper.cpp
 
 ![image](assets/whisper-arch-v0.png)
 
-The pipeline consists of 3 core elements:
+The workflow consists of 3 core elements:
 1. Rust CLI Tool to upload video directory from local to S3
 2. Serverless transcription pipeline (S3 + Lambda + Step Functions)
 3. CI/CD Pipeline (CodeBuild + CodePipeline)
 
+---
+
 ## Getting Started
 
-**Install Rust via [rustup](https://rustup.rs/)**
+**Install Rust**
+
+Refer to the latest [rustup docs](https://rustup.rs/)
 
 ```
 $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
@@ -20,7 +24,7 @@ $ . "$HOME/.cargo/env"
 
 **Install AWS CLI v2**
 
-Refer to the latest install [docs](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+Refer to the latest [AWS docs](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
 ```
 # Check if installed
@@ -32,7 +36,9 @@ $ unzip awscliv2.zip
 $ sudo ./aws/install
 ```
 
-**Clone Repo**
+**Clone or Fork Repo**
+
+NB: To setup CI/CD you must have a hosted version of the repo (Github/Gitlab/Bitbucket)
 
 ```
 $ git clone https://github.com/athletedecoded/transcribe.git
@@ -45,6 +51,8 @@ $ git clone https://github.com/athletedecoded/transcribe.git
 $ make cargo-lambda
 $ . $HOME/.bashrc
 ```
+
+---
 
 ## Developer Docs
 
@@ -64,13 +72,20 @@ Jump To:
 * [Testing & Debugging](#testing--debugging)
 * [Transcriber Memory Management](#transcriber-memory-management)
 * [Modifying & Updating Transcriber Pipeline](#modifying--updating-transcriber)
+* [Configure CI/CD Pipeline](#configure-cicd-pipeline)
 
+--- 
 
 ### Provision S3 Resources
 
-S3 console > Create Bucket > Allocate 2 buckets: one for video inputs the other for transcript outputs i.e. `videos` and `transcripts` 
+S3 console > Create Bucket > Allocate 3 buckets: 
+1. One for video inputs i.e. 'videos'
+2. One for transcript outputs i.e. 'transcripts'
+3. One for CI/CD artifacts i.e 'transcribe-cicd'
 
 NB: Buckets must adhere to global naming rules
+
+--- 
 
 ### Configure env vars
 
@@ -84,6 +99,8 @@ AWS_DEFAULT_REGION=<YOUR_AWS_REGION>
 VIDEO_BUCKET=<YOUR_S3_VIDEO_BUCKET>
 TRANSCRIPT_BUCKET=<YOUR_S3_TRANSCRIPT_BUCKET>
 ```
+
+--- 
 
 ### Configure Roles & Permissions
 
@@ -183,6 +200,8 @@ IAM console > Roles > Create Role > AWS Service: Lambda > Permissions: `logging-
 
 IAM console > Users > Create User > Attach Policies Directly: `AmazonS3FullAccess`, `AmazonEC2FullAccess`
 
+--- 
+
 ### Configure Local AWS Credentials
 
 Create Access Key for `transcribe` > add to default `~/.aws/credentials` profile:
@@ -200,6 +219,8 @@ Create Access Key for `transcribe-lambda-developer` > add new `~/.aws/credential
 aws_access_key_id=<TRANSCRIBE_LAMBDA_DEVELOPER_ACCESS_KEY>
 aws_secret_access_key=<TRANSCRIBE_LAMBDA_DEVELOPER_SECRET_KEY>
 ```
+
+--- 
 
 ### Deploy Transcriber Function
 
@@ -229,12 +250,16 @@ $ make ecr-push
 $ make deploy-lambda
 ```
 
+--- 
+
 ### Configure Step Function
 
 1. Step Function console > Create state machine > Code editor
 2. Copy `lambda-fxns/transcriber/statemachine.json` and update `${AWS_DEFAULT_REGION}`, `${AWS_ACCT_ID}`, `${VIDEO_BUCKET}` placeholders
 3. Config > State machine name: transcribe-machine > Create
 4. Add `STATE_MACHINE_ARN=<TRANSCRIBE_MACHINE_ARN>` to `.env`
+
+--- 
 
 ### Deploy Listener Function
 
@@ -245,9 +270,13 @@ $ make deploy-lambda
 $ make deploy-zip
 ```
 
+--- 
+
 ### Configure Listener Trigger
 
-Lambda console > transcriber > Add Trigger > S3 > Bucket: whisper-videos > Event types: PUT > Add
+Lambda console > transcriber > Add Trigger > S3 > Bucket: videos > Event types: PUT > Add
+
+--- 
 
 ### Build Transcribe Binary
 
@@ -255,6 +284,8 @@ Lambda console > transcriber > Add Trigger > S3 > Bucket: whisper-videos > Event
 # cd transcribe
 $ make binary
 ```
+
+--- 
 
 ### Run E2E Transcription Pipeline
 
@@ -282,6 +313,8 @@ path/to/vid_dir/
     |-- week3
         ...
 ```
+
+--- 
 
 ### Testing & Debugging
 
@@ -329,6 +362,8 @@ $ curl -XPOST "http://localhost:9000/2015-03-31/functions/function/invocations" 
 }'
 ```
 
+--- 
+
 ### Transcriber Memory Management
 
 The current transcriber function configuration is set to 5GB CPU + 5GB ephemeral /tmp storage + batch size of 5. This allows for 
@@ -336,6 +371,8 @@ The current transcriber function configuration is set to 5GB CPU + 5GB ephemeral
 
 NB: If you encounter mutex/broken pipe/early termination/incomplete transcription errors in deployment (but not when 
 testing the transcriber image locally) try increase the CPU memory and/or ephemeral /tmp storage.
+
+--- 
 
 ### Modifying & Updating Transcriber
 
@@ -355,10 +392,50 @@ $ make update-lambda-code
 $ make update-lambda-config
 ```
 
-### To Do
+--- 
+
+### Configure CI/CD Pipeline
+
+CodePipeline console > Create Pipeline
+
+**Step 1: Choose pipeline settings**
+
+![image](assets/cicd-pipeline-1.png)
+![image](assets/cicd-pipeline-2.png)
+
+**Step 2: Add source stage**
+
+![image](assets/cicd-pipeline-3.png)
+![image](assets/cicd-pipeline-4.png)
+
+**Step 3: Add build stage**
+
+Use the 'Create Project' launchout to create CodeBuild project `transcribe-build`
+* Project name: transcribe-build
+* Provisioning model: On-demand
+* Environment image: Managed image
+* Compute: EC2
+* Operating system: Ubuntu
+* Service role: New service role
+* Role name: codebuild-transcribe
+* Buildspec: Use a buildspec.yml
+
+![image](assets/cicd-pipeline-5.png)
+
+Set `ACCESS_KEY` and `SECRET_KEY` environment variables to match the `transcribe-lambda-dev` profile in your local `~/.aws/credentials`
+
+**Step 4: Add deploy stage**
+
+![image](assets/cicd-pipeline-6.png)
+
+--- 
+
+### ToDos
 
 * [ ] Parallelize file ops w/ Rayon
 * [ ] Reattempt failed files
+
+--- 
 
 ### References
 * [Deploying Lambda Containers](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html)
