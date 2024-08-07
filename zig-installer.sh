@@ -53,7 +53,9 @@ else
     [ -f zig-latest.tar.xz ] && rm zig-latest.tar.xz
 
     # Add to PATH
-    echo 'export PATH="$PATH:'"$INSTALL_DIR"'"' >> "$HOME/.bashrc"
-    source "$HOME/.bashrc"
+    if [[ ":$PATH:" != *":$INSTALL_DIR:"* ]]; then
+      echo 'export PATH="$PATH:'"$INSTALL_DIR"'"' >> "$HOME/.bashrc"
+    fi
+
     echo "Zig has been installed/updated to version $LATEST_VERSION"
 fi

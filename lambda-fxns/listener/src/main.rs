@@ -19,7 +19,7 @@ async fn function_handler(event: LambdaEvent<S3Event>) -> Result<Response, Error
         .unwrap()
         .as_str();
     let bucket = event.payload.records[0].s3.bucket.name.as_ref().unwrap().as_str();
-    tracing::info!("{event_type} event trigger on bucket {}",event_type);
+    tracing::info!("{} event trigger on bucket {}",event_type, bucket);
     // Listen for done file
     let key = event.payload.records[0].s3.object.key.as_ref().unwrap().as_str();
     let response = match key {

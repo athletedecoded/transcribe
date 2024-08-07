@@ -15,7 +15,7 @@ The pipeline consists of 3 core elements:
 
 ```
 $ curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal --default-toolchain stable
-$ source "$HOME/.cargo/env"
+$ . "$HOME/.cargo/env"
 ```
 
 **Install AWS CLI v2**
@@ -43,6 +43,7 @@ $ git clone https://github.com/athletedecoded/transcribe.git
 ```
 # cd transcribe
 $ make cargo-lambda
+$ . $HOME/.bashrc
 ```
 
 ## Developer Docs
