@@ -12,5 +12,5 @@ binary:
 
 cargo-lambda:
 	curl -L --proto '=https' --tlsv1.2 -sSf https://raw.githubusercontent.com/cargo-bins/cargo-binstall/main/install-from-binstall-release.sh | bash
-	cargo binstall cargo-lambda
+	cargo binstall cargo-lambda -y
 	chmod +x zig-installer.sh && ./zig-installer.sh
