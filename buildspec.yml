@@ -25,6 +25,7 @@ phases:
       - ENV=prod make deploy-zip
       - echo "Build & Deploy Transcriber"
       - cd ../transcriber
+      - chmod 755 transcribe.sh
       - ENV=prod make image
       - ENV=prod make ecr-login
       - ENV=prod make ecr-push
