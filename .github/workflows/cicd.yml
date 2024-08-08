@@ -1,0 +1,55 @@
+name: CI/CD
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  release_matrix:
+    strategy:
+      matrix:
+        release: [stable, beta]
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Rust
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: ${{ matrix.release }}
+          profile: minimal
+          components: clippy, rustfmt
+          override: true
+
+      - name: Check Rust toolchain
+        run: make toolchain
+
+      - name: Format
+        run: make format
+
+      - name: Lint
+        run: make lint
+
+      - name: Test
+        run: make test
+
+      - name: Build Binary
+        run: make binary
+
+      - name: Build CICD badges
+        uses: RubbaBoy/BYOB@v1.3.0
+        with:
+          NAME: ${{ matrix.release }}
+          LABEL: ${{ matrix.release }}
+          STATUS: ${{ job.status }}
+          COLOR: ${{ job.status == 'success' && 'green' || job.status == 'failure' && 'red' || 'yellow' }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
