@@ -6,12 +6,12 @@ ARCH="$(uname -m)"
 # Check for required tools
 if ! command -v jq &> /dev/null; then
     echo "jq is required but not installed. Installing jq."
-    sudo apt-get install jq
+    apt-get install jq
 fi
 
 if ! command -v wget &> /dev/null; then
     echo "wget is required but not installed. Installing wget."
-    sudo apt-get install wget
+    apt-get install wget
 fi
 
 # Fetch Zig index

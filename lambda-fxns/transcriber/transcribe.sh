@@ -7,6 +7,12 @@ if [ -z "$1" ]; then
   exit 1
 fi
 
+# check ffmpeg version
+echo "ffmpeg version: $(ffmpeg -version)"
+
+# check whisper version
+echo "whisper probe: $(./var/task/whisper.cpp/main)"
+
 # i.e. /tmp/videos
 vid_dir=$1
 echo "Input directory: $vid_dir"

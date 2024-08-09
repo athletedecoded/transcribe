@@ -4,7 +4,7 @@
 FROM public.ecr.aws/docker/library/rust:slim-bullseye as builder
 
 WORKDIR /usr/src/app
-COPY .. .
+COPY . .
 
 RUN cargo build --release
 
@@ -12,6 +12,9 @@ RUN cargo build --release
 #   STAGE 1: Build Amazon 2023 Base OS Image
 ####################################
 FROM public.ecr.aws/lambda/provided:al2023
+
+# /var/task
+WORKDIR ${LAMBDA_TASK_ROOT}
 
 ## Install dependencies
 RUN dnf update -y && \
@@ -27,7 +30,7 @@ RUN wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.t
 # Install whisper-cpp
 RUN git clone https://github.com/ggerganov/whisper.cpp.git && cd whisper.cpp && make
 
-# Download base model
+# Download base model to ./whisper.cpp/models
 RUN ./whisper.cpp/models/download-ggml-model.sh base.en
 
 # Copy transcribe-fxn binary & shell script
