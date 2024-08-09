@@ -5,11 +5,24 @@ Serverless E2E workflow to transcribe videos using Rust x AWS x Whisper.cpp
 ![image](assets/whisper-arch-v0.png)
 
 The workflow consists of 3 core elements:
-1. Rust CLI Tool to upload video directory from local to S3
-2. Serverless transcription pipeline (S3 + Lambda + Step Functions)
+1. Rust CLI Tool to upload local video directory
+2. Serverless transcription pipeline (Lambda + Step Functions)
 3. CI/CD Pipeline (CodeBuild + CodePipeline)
 
 ---
+
+## Cost & Performance Analysis
+
+| Resource        |     AWS Service      |      Size      |  Cost  |
+|-----------------|:--------------------:|:--------------:|:------:|
+| listener        |    lambda (.zip)     |      3 MB      |        |
+| transcriber     | lambda (image) + ecr |     582 MB     |        |
+| cleanup         |    lambda (.zip)     |      tbc       |        |
+| videos          |      S3 bucket       | scales to zero |        |
+| transcripts     |      S3 bucket       |      tbc       |        |
+| CI/CD artifacts |      S3 bucket       |      tbc       |        |
+| transcribe-cicd |     CodePipeline     |       /        |        |
+
 
 ## Getting Started
 
@@ -440,14 +453,14 @@ Use the 'Create Project' launchout to create CodeBuild project `transcribe-build
 
 ### ToDos
 
-* [ ] Cleanup S3 videos
-* [ ] Parallelize file ops w/ Rayon
+* Cleanup S3 videos
+* Parallelize file ops w/ Rayon
 
 --- 
 
 ### Future Features
 
-* [ ] Reattempt failed files
+* [ ] Reattempt failed uploads/transcriptions
 * [ ] Automate resource/IAM provisioning with CloudFormation/CDK
 
 --- 
