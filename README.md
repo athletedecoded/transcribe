@@ -38,8 +38,6 @@ $ sudo ./aws/install
 
 **Clone or Fork Repo**
 
-NB: To setup CI/CD you must have a hosted version of the repo (Github/Gitlab/Bitbucket)
-
 ```
 $ git clone https://github.com/athletedecoded/transcribe.git
 ```
@@ -78,10 +76,9 @@ Jump To:
 
 ### Provision S3 Resources
 
-S3 console > Create Bucket > Allocate 3 buckets: 
+S3 console > Create Bucket > Allocate 2 buckets: 
 1. One for video inputs i.e. 'videos'
 2. One for transcript outputs i.e. 'transcripts'
-3. One for CI/CD artifacts i.e 'transcribe-cicd'
 
 NB: Buckets must adhere to global naming rules
 
@@ -278,12 +275,18 @@ Lambda console > transcriber > Add Trigger > S3 > Bucket: videos > Event types: 
 
 --- 
 
-### Build Transcribe Binary
+### Build or Download Transcribe Binary
+
+**Build from Source**
 
 ```
 # cd transcribe
 $ make binary
 ```
+
+**Download Release**
+
+Download the latest release [here](https://github.com/athletedecoded/transcribe/releases)
 
 --- 
 
@@ -322,7 +325,7 @@ path/to/vid_dir/
 
 ```
 # cd transcribe
-$ make tests
+$ make test
 ```
 
 **Test transcriber image locally**
@@ -396,12 +399,17 @@ $ make update-lambda-config
 
 ### Configure CI/CD Pipeline
 
+⚠️ To setup CI/CD you must have a hosted version of the repo on Github/Gitlab/Bitbucket etc ⚠️
+
+**Create policy `codebuild-transcribe-policy`**
+
+IAM console > Policies > Create Policy > JSON
+
 CodePipeline console > Create Pipeline
 
 **Step 1: Choose pipeline settings**
 
 ![image](assets/cicd-pipeline-1.png)
-![image](assets/cicd-pipeline-2.png)
 
 **Step 2: Add source stage**
 
@@ -422,7 +430,7 @@ Use the 'Create Project' launchout to create CodeBuild project `transcribe-build
 
 ![image](assets/cicd-pipeline-5.png)
 
-Set `ACCESS_KEY` and `SECRET_KEY` environment variables to match the `transcribe-lambda-dev` profile in your local `~/.aws/credentials`
+⚠️ Set `ACCESS_KEY` and `SECRET_KEY` environment variables to match the `transcribe-lambda-dev` profile in your local `~/.aws/credentials` ⚠️
 
 **Step 4: Add deploy stage**
 
@@ -432,8 +440,15 @@ Set `ACCESS_KEY` and `SECRET_KEY` environment variables to match the `transcribe
 
 ### ToDos
 
+* [ ] Cleanup S3 videos
 * [ ] Parallelize file ops w/ Rayon
+
+--- 
+
+### Future Features
+
 * [ ] Reattempt failed files
+* [ ] Automate resource/IAM provisioning with CloudFormation/CDK
 
 --- 
 

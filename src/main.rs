@@ -1,8 +1,8 @@
 use clap::Parser;
 use glob::glob;
 use std::error::Error;
-use std::path::Path;
 use std::fs::File;
+use std::path::Path;
 use std::process;
 use transcribe::{extract_key, init_s3client, upload_object, validate_config, validate_path};
 
