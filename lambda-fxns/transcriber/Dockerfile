@@ -1,7 +1,7 @@
 ####################################
 #   STAGE 0: Build transcribe-fxn
 ####################################
-FROM rust:1-bullseye as builder
+FROM public.ecr.aws/docker/library/rust:slim-bullseye as builder
 
 WORKDIR /usr/src/app
 COPY .. .
