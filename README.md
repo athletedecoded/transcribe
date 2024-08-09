@@ -453,6 +453,7 @@ Use the 'Create Project' launchout to create CodeBuild project `transcribe-build
 
 ### ToDos
 
+* Debug CICD causing mutex error
 * Cleanup S3 videos
 * Parallelize file ops w/ Rayon
 
