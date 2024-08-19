@@ -16,7 +16,7 @@
             "Resource": "arn:aws:states:::lambda:invoke",
             "OutputPath": "$.Payload",
             "Parameters": {
-              "FunctionName": "arn:aws:lambda:${AWS_DEFAULT_REGION}:${AWS_ACCT_ID}:function:transcriber:$LATEST",
+              "FunctionName": "arn:aws:lambda:${AWS_DEFAULT_REGION}:{AWS_ACCT_ID}:function:transcriber:$LATEST",
               "Payload.$": "$"
             },
             "Retry": [
@@ -44,10 +44,33 @@
       },
       "MaxConcurrency": 20,
       "Label": "S3objectkeys",
-      "End": true,
       "ItemBatcher": {
         "MaxItemsPerBatch": 5
-      }
+      },
+      "Next": "Cleanup"
+    },
+    "Cleanup": {
+      "Type": "Task",
+      "Resource": "arn:aws:states:::lambda:invoke",
+      "OutputPath": "$.Payload",
+      "Parameters": {
+        "Payload.$": "$",
+        "FunctionName": "arn:aws:lambda:${AWS_DEFAULT_REGION}:{AWS_ACCT_ID}:function:cleanup:$LATEST"
+      },
+      "Retry": [
+        {
+          "ErrorEquals": [
+            "Lambda.ServiceException",
+            "Lambda.AWSLambdaException",
+            "Lambda.SdkClientException",
+            "Lambda.TooManyRequestsException"
+          ],
+          "IntervalSeconds": 1,
+          "MaxAttempts": 3,
+          "BackoffRate": 2
+        }
+      ],
+      "End": true
     }
   }
 }
