@@ -2,27 +2,18 @@
 
 Serverless E2E workflow to transcribe videos using Rust x AWS x Whisper.cpp
 
-![image](assets/whisper-arch-v0.png)
+![image](assets/architecture.png)
 
 The workflow consists of 3 core elements:
 1. Rust CLI Tool to upload local video directory
 2. Serverless transcription pipeline (Lambda + Step Functions)
 3. CI/CD Pipeline (CodeBuild + CodePipeline)
 
+**Bugs**
+
+🪲 Currently debugging whisper.cpp cross-compilation error when using CodeBuild EC2 compute instances (AL2023, Ubuntu) and deploying to lambda. Transcription fails with error: `Illegal instruction (core dumped) | ./whisper.cpp/main -m whisper.cpp/models/ggml-base.en.bin -f - > "$output_file"`
+
 ---
-
-## Cost & Performance Analysis
-
-| Resource        |     AWS Service      |      Size      |  Cost  |
-|-----------------|:--------------------:|:--------------:|:------:|
-| listener        |    lambda (.zip)     |      3 MB      |        |
-| transcriber     | lambda (image) + ecr |     582 MB     |        |
-| cleanup         |    lambda (.zip)     |      tbc       |        |
-| videos          |      S3 bucket       | scales to zero |        |
-| transcripts     |      S3 bucket       |      tbc       |        |
-| CI/CD artifacts |      S3 bucket       |      tbc       |        |
-| transcribe-cicd |     CodePipeline     |       /        |        |
-
 
 ## Getting Started
 
@@ -152,8 +143,8 @@ NB: Replace {AWS-ACCT-ID} with your account ID
         {
             "Effect": "Allow",
             "Action": [
-				"ecr:GetAuthorizationToken",
-				"ecr:SetRepositoryPolicy",
+                "ecr:GetAuthorizationToken",
+                "ecr:SetRepositoryPolicy",
                 "ecr:GetDownloadUrlForLayer",
                 "ecr:BatchGetImage",
                 "ecr:CompleteLayerUpload",
@@ -205,6 +196,10 @@ IAM console > Roles > Create Role > AWS Service: Lambda > Permissions: `logging-
 **Create role `listener-fxn-role`**
 
 IAM console > Roles > Create Role > AWS Service: Lambda > Permissions: `logging-policy`, `AWSStepFunctionsFullAccess`
+
+**Create role `cleanup-fxn-role`**
+
+IAM console > Roles > Create Role > AWS Service: Lambda > Permissions: `logging-policy`, `AmazonS3FullAccess`
 
 **Create user `transcribe`**
 
@@ -282,9 +277,12 @@ $ make deploy-zip
 
 --- 
 
-### Configure Listener Trigger
+### Configure Listener Triggers
 
-Lambda console > transcriber > Add Trigger > S3 > Bucket: videos > Event types: PUT > Add
+Set S3 Put Event Triggers on Listener Lambda:
+
+1. Lambda console > listener > Add Trigger > S3 > Bucket: videos > Event types: PUT > Add
+2. Lambda console > listener > Add Trigger > S3 > Bucket: transcripts > Event types: PUT > Add
 
 --- 
 
@@ -412,7 +410,6 @@ $ make update-lambda-config
 
 ### Configure CI/CD Pipeline
 
-⚠️ To setup CI/CD you must have a hosted version of the repo on Github/Gitlab/Bitbucket etc ⚠️
 
 **Create policy `codebuild-transcribe-policy`**
 
@@ -431,17 +428,17 @@ CodePipeline console > Create Pipeline
 
 **Step 3: Add build stage**
 
-Use the 'Create Project' launchout to create CodeBuild project `transcribe-build`
+![image](assets/cicd-pipeline-5.png)
+
+Use the 'Create Project' launchout to create new CodeBuild project:
+
 * Project name: transcribe-build
-* Provisioning model: On-demand
-* Environment image: Managed image
-* Compute: EC2
-* Operating system: Ubuntu
 * Service role: New service role
 * Role name: codebuild-transcribe
-* Buildspec: Use a buildspec.yml
 
-![image](assets/cicd-pipeline-5.png)
+![image](assets/cicd-build-1.png)
+![image](assets/cicd-build-2.png)
+![image](assets/cicd-build-3.png)
 
 ⚠️ Set `ACCESS_KEY` and `SECRET_KEY` environment variables to match the `transcribe-lambda-dev` profile in your local `~/.aws/credentials` ⚠️
 
@@ -451,16 +448,11 @@ Use the 'Create Project' launchout to create CodeBuild project `transcribe-build
 
 --- 
 
-### ToDos
-
-* Debug CICD causing mutex error
-* Cleanup S3 videos
-* Parallelize file ops w/ Rayon
-
---- 
-
 ### Future Features
 
+* [ ] Add TARGET_ARCH to support both amd64 & arm64 
+* [ ] Parallelize file ops with Rayon
+* [ ] Check for empty/failed transcripts before S3 upload
 * [ ] Reattempt failed uploads/transcriptions
 * [ ] Automate resource/IAM provisioning with CloudFormation/CDK
 
@@ -469,6 +461,8 @@ Use the 'Create Project' launchout to create CodeBuild project `transcribe-build
 ### References
 * [Deploying Lambda Containers](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html)
 * [Lambda Runtime Emulator](https://github.com/aws/aws-lambda-runtime-interface-emulator)
+* [Codebuild Managed Images](https://docs.aws.amazon.com/codebuild/latest/userguide/build-env-ref-available.html)
+* [CodeBuild Environment Configuration](https://docs.aws.amazon.com/codebuild/latest/userguide/create-project-console.html#create-project-console-environment)
 * [FFMpeg Static Builds](https://johnvansickle.com/ffmpeg/)
 * [AWS S3 x Lambda Example](https://docs.aws.amazon.com/lambda/latest/dg/with-s3-example.html#with-s3-example-create-bucket)
 * [Cargo Lambda Docs](https://www.cargo-lambda.info/)

@@ -23,6 +23,9 @@ phases:
       - echo "Build & Deploy Listener"
       - cd lambda-fxns/listener
       - ENV=prod make deploy-zip
+      - echo "Build & Deploy Cleanup"
+      - cd ../cleanup
+      - ENV=prod make deploy-zip
       - echo "Build & Deploy Transcriber"
       - cd ../transcriber
       - chmod 755 transcribe.sh

@@ -29,7 +29,7 @@ deploy-lambda:
 		--profile transcribe-lambda-dev \
 		--region ${AWS_DEFAULT_REGION} \
 		--function-name transcriber \
-		--timeout 300 \
+		--timeout 900 \
 		--memory-size 5000 \
 		--ephemeral-storage Size=5000 \
 		--environment Variables="{VIDEO_BUCKET=${VIDEO_BUCKET},TRANSCRIPT_BUCKET=${TRANSCRIPT_BUCKET}}" \

@@ -25,12 +25,14 @@ struct S3Items {
 }
 
 #[derive(Serialize)]
-struct LambdaResponse {
+struct TranscriberResponse {
     message: String,
+    processed: Vec<String>,
+    failed: Vec<String>,
 }
 
 
-async fn function_handler(event: LambdaEvent<S3Items>) -> Result<LambdaResponse, Error> {
+async fn function_handler(event: LambdaEvent<S3Items>) -> Result<TranscriberResponse, Error> {
     // Init S3 client
     let s3client = init_s3client().await.unwrap();
     // Env Vars
@@ -104,12 +106,13 @@ async fn function_handler(event: LambdaEvent<S3Items>) -> Result<LambdaResponse,
         }
     }
 
-    // Prepare the response
-    let resp = LambdaResponse {
-        message: format!("DONE! Transcripts available in S3 Bucket: {}\n Processed Transcripts: {:?}\n Failed Transcripts: {:?}", tscript_bucket, processed_transcripts, failed_transcripts)
+    // Response
+    let resp = TranscriberResponse {
+        message: format!("DONE! Transcripts available in S3 Bucket: {}", tscript_bucket),
+        processed: processed_transcripts,
+        failed: failed_transcripts
     };
 
-    // Return `Response` (it will be serialized to JSON automatically by the runtime)
     Ok(resp)
 }
 

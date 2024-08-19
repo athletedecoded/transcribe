@@ -12,18 +12,12 @@ struct Response {
 async fn function_handler(event: LambdaEvent<S3Event>) -> Result<Response, Error> {
     dotenv::dotenv().ok();
     let state_machine = dotenv::var("STATE_MACHINE_ARN").expect("STATE_MACHINE_ARN not set");
-    // Validate trigger config
-    let event_type = event.payload.records[0]
-        .event_name
-        .as_ref()
-        .unwrap()
-        .as_str();
     let bucket = event.payload.records[0].s3.bucket.name.as_ref().unwrap().as_str();
-    tracing::info!("{} event trigger on bucket {}",event_type, bucket);
     // Listen for done file
     let key = event.payload.records[0].s3.object.key.as_ref().unwrap().as_str();
     let response = match key {
         "done.txt" => {
+            tracing::info!("Donefile --> {bucket}");
             // Initialize client
             let sfn_client = init_client().await.unwrap();
             // Start execution
@@ -34,11 +28,8 @@ async fn function_handler(event: LambdaEvent<S3Event>) -> Result<Response, Error
                 .send()
                 .await
                 .unwrap();
-
-            println!("Step function response: `{:?}`", resp);
-
             // Trigger step function
-            "Step function triggered".to_string()
+            "Transcription Pipeline triggered".to_string()
         }
         _ => {
             format!("UPLOAD: {}", &key)
