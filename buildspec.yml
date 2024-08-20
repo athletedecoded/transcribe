@@ -17,7 +17,7 @@ phases:
       - echo "[transcribe-lambda-dev]" > ~/.aws/credentials
       - echo "aws_access_key_id=$ACCESS_KEY" >> ~/.aws/credentials
       - echo "aws_secret_access_key=$SECRET_KEY" >> ~/.aws/credentials
-      - cat ~/.aws/credentials
+      - ENV=prod make ecr-login
   build:
     commands:
       - echo "Build & Deploy Listener"
@@ -30,7 +30,6 @@ phases:
       - cd ../transcriber
       - chmod 755 transcribe.sh
       - ENV=prod make image
-      - ENV=prod make ecr-login
       - ENV=prod make ecr-push
       - ENV=prod make update-lambda-code
 #      - sleep 120 # wait 2 min to ensure change

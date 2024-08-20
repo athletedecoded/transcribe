@@ -69,8 +69,8 @@ async fn main() -> Result<(), Box<dyn Error>> {
     }
     // create & upload done file
     let done_path = Path::new("done.txt");
-    let _file = File::create(&done_path);
-    match upload_object(&s3client, &vid_bucket, &done_path, "done.txt").await {
+    let _file = File::create(done_path);
+    match upload_object(&s3client, &vid_bucket, done_path, "done.txt").await {
         Ok(_) => println!("SUCCESS: Upload complete for {}", vid_dir.display()),
         Err(e) => println!("ERROR: Failed to upload done file. {}", e),
     }

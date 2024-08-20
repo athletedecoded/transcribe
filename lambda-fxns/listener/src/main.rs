@@ -22,7 +22,7 @@ async fn function_handler(event: LambdaEvent<S3Event>) -> Result<Response, Error
             let sfn_client = init_client().await.unwrap();
             // Start execution
             let payload = r#"{"input": {"payload": "Listener --> Step Function!"}}"#;
-            let resp = sfn_client.start_execution()
+            let _ = sfn_client.start_execution()
                 .state_machine_arn(&state_machine)
                 .input(payload)
                 .send()

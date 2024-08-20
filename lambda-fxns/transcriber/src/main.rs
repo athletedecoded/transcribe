@@ -1,12 +1,8 @@
-use std::path::Path;
 use glob::glob;
-use lambda_runtime::{run, service_fn, tracing, Error, Context, LambdaEvent};
+use lambda_runtime::{run, service_fn, tracing, Error, LambdaEvent};
 use serde::{Deserialize, Serialize};
-use serde_json::{json, Value};
 use transcriber::{init_s3client, get_video, put_transcript};
 use std::process::Command;
-use aws_sdk_s3::Client;
-use tokio::fs::create_dir_all;
 
 #[derive(Deserialize)]
 #[serde(rename_all = "PascalCase")]
