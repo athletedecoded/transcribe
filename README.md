@@ -9,8 +9,6 @@ The workflow consists of 3 core elements:
 2. Serverless transcription pipeline (Lambda + Step Functions)
 3. CI/CD Pipeline (CodeBuild + CodePipeline)
 
-🪲 Currently debugging whisper.cpp cross-compilation error when using CodeBuild EC2 compute instances (AL2023, Ubuntu) and deploying to lambda. Transcription fails with error: `Illegal instruction (core dumped) | ./whisper.cpp/main -m whisper.cpp/models/ggml-base.en.bin -f - > "$output_file"`
-
 ---
 
 ## Getting Started
@@ -60,9 +58,8 @@ $ . $HOME/.bashrc
 
 Jump To:
 * [Provision S3 Resources](#provision-s3-resources)
-* [Configure Env Vars](#configure-env-vars)
 * [Configure Roles & Permissions](#configure-roles--permissions)
-* [Configure Local AWS Credentials](#configure-local-aws-credentials)
+* [Configure Environment & Credentials](#configure-environment--credentials)
 * [Deploy Transcriber Function](#deploy-transcriber-function)
 * [Configure Step Function](#configure-step-function)
 * [Deploy Listener Function](#deploy-listener-function)
@@ -83,21 +80,6 @@ S3 console > Create Bucket > Allocate 2 buckets:
 2. One for transcript outputs i.e. 'transcripts'
 
 NB: Buckets must adhere to global naming rules
-
---- 
-
-### Configure env vars
-
-Create a `.env` file in root and add AWS account ID, default region, and bucket variable values
-
-```
-# .env
-
-AWS_ACCT_ID=<YOUR_AWS_ACCT_ID>
-AWS_DEFAULT_REGION=<YOUR_AWS_REGION>
-VIDEO_BUCKET=<YOUR_S3_VIDEO_BUCKET>
-TRANSCRIPT_BUCKET=<YOUR_S3_TRANSCRIPT_BUCKET>
-```
 
 --- 
 
@@ -162,10 +144,6 @@ NB: Replace {AWS-ACCT-ID} with your account ID
 }
 ```
 
-**Create user `transcribe-lambda-developer`**
-
-IAM console > Users > Create User > Attach Policies Directly: `transcribe-lambda-deploy`, `AWSStepFunctionsFullAccess`
-
 **Create policy `logging-policy`**
 
 IAM console > Policies > Create Policy > JSON
@@ -203,11 +181,38 @@ IAM console > Roles > Create Role > AWS Service: Lambda > Permissions: `logging-
 
 IAM console > Users > Create User > Attach Policies Directly: `AmazonS3FullAccess`, `AmazonEC2FullAccess`
 
+**Create user `transcribe-lambda-developer`**
+
+IAM console > Users > Create User > Attach Policies Directly: `transcribe-lambda-deploy`, `AWSStepFunctionsFullAccess`
+
 --- 
 
-### Configure Local AWS Credentials
+### Configure Environment & Credentials
 
-Create Access Key for `transcribe` > add to default `~/.aws/credentials` profile:
+**Set Environment Variables**
+
+In `sample.env` add AWS account ID, default region, and bucket variable values
+
+```
+# sample.env
+
+AWS_ACCT_ID=<YOUR_AWS_ACCT_ID>
+AWS_DEFAULT_REGION=<YOUR_AWS_REGION>
+VIDEO_BUCKET=<YOUR_S3_VIDEO_BUCKET>
+TRANSCRIPT_BUCKET=<YOUR_S3_TRANSCRIPT_BUCKET>
+```
+
+Move/rename `sample.env` to `.env`
+
+```
+$ mv sample.env .env
+```
+
+**Set AWS Credentials**
+
+In `sample.credentials` configure AWS credential profiles:
+
+1. Create Access Key for user `transcribe` > set as default profile
 
 ```
 [default]
@@ -215,7 +220,7 @@ aws_access_key_id=<TRANSCRIBE_ACCESS_KEY>
 aws_secret_access_key=<TRANSCRIBE_SECRET_KEY>
 ```
 
-Create Access Key for `transcribe-lambda-developer` > add new `~/.aws/credentials` profile:
+2. Create Access Key for user `transcribe-lambda-developer` > set as transcribe-lambda-dev profile
 
 ```
 [transcribe-lambda-dev]
@@ -223,18 +228,24 @@ aws_access_key_id=<TRANSCRIBE_LAMBDA_DEVELOPER_ACCESS_KEY>
 aws_secret_access_key=<TRANSCRIBE_LAMBDA_DEVELOPER_SECRET_KEY>
 ```
 
+Move `sample.credentials` to `~/.aws/credentials`
+
+```
+$ mv sample.credentials ~/.aws/credentials
+```
+
 --- 
 
-### Deploy Transcriber Function
+### Deploy Containerized Transcriber Function
 
-**Build transcriber function (image)**
+**Build transcriber function**
 
 ```
 # cd lambda-fxns/transcriber
 $ make image
 ```
 
-**Push Container Image to ECR**
+**Push Image to ECR**
 
 ```
 # Login
@@ -247,7 +258,7 @@ $ make ecr-repo
 $ make ecr-push
 ```
 
-**Deploy containerized transcriber function**
+**Deploy transcriber function**
 
 ```
 $ make deploy-lambda
@@ -259,7 +270,7 @@ $ make deploy-lambda
 
 1. Step Function console > Create state machine > Code editor
 2. Copy `lambda-fxns/transcriber/statemachine.json` and update `${AWS_DEFAULT_REGION}`, `${AWS_ACCT_ID}`, `${VIDEO_BUCKET}` placeholders
-3. Config > State machine name: transcribe-machine > Create
+3. Config > State machine name: transcribe-pipeline > Create
 4. Add `STATE_MACHINE_ARN=<TRANSCRIBE_MACHINE_ARN>` to `.env`
 
 --- 
@@ -275,25 +286,33 @@ $ make deploy-zip
 
 --- 
 
-### Configure Listener Triggers
+### Deploy Cleanup Function
 
-Set S3 Put Event Triggers on Listener Lambda:
+**Deploy cleanup function (.zip)**
 
-1. Lambda console > listener > Add Trigger > S3 > Bucket: videos > Event types: PUT > Add
-2. Lambda console > listener > Add Trigger > S3 > Bucket: transcripts > Event types: PUT > Add
+```
+# cd lambda-fxns/cleanup
+$ make deploy-zip
+```
+
+--- 
+
+### Configure Listener Trigger
+
+Lambda console > listener > Add Trigger > S3 > Bucket: videos > Event types: PUT > Add
 
 --- 
 
 ### Build or Download Transcribe Binary
 
-**Build from Source**
+**Option 1: Build from Source**
 
 ```
 # cd transcribe
 $ make binary
 ```
 
-**Download Release**
+**Option 2: Download Binary**
 
 Download the latest release [here](https://github.com/athletedecoded/transcribe/releases)
 
@@ -306,7 +325,7 @@ Download the latest release [here](https://github.com/athletedecoded/transcribe/
 $ ./target/release/transcribe <path/to/vid_dir>
 ```
 
-NB: relies on well-formed directory structure
+NB: vid_dir must adhere to well-formed directory structure
 
 ```
 path/to/vid_dir/
@@ -391,7 +410,7 @@ testing the transcriber image locally) try increase the CPU memory and/or epheme
 **Transcriber Function Code**
 
 ```
-# modify /lambda-fxns/transcriber/src/*
+# cd lambda-fxns/transcriber
 $ make image
 $ make ecr-login
 $ make ecr-push
@@ -401,6 +420,7 @@ $ make update-lambda-code
 **Transcriber Function Configuration**
 
 ```
+# cd lambda-fxns/transcriber
 $ make update-lambda-config
 ```
 
@@ -408,6 +428,7 @@ $ make update-lambda-config
 
 ### Configure CI/CD Pipeline
 
+🪲 Currently debugging whisper.cpp cross-compilation error when using CodeBuild EC2 compute instances (AL2023, Ubuntu) and deploying to lambda. Transcription fails with error: `Illegal instruction (core dumped) | ./whisper.cpp/main -m whisper.cpp/models/ggml-base.en.bin -f - > "$output_file"`
 
 **Create policy `codebuild-transcribe-policy`**
 
