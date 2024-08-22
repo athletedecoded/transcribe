@@ -238,10 +238,19 @@ $ mv sample.credentials ~/.aws/credentials
 
 ### Deploy Containerized Transcriber Function
 
-**Build transcriber function**
+**Build whisper.cpp**
 
 ```
 # cd lambda-fxns/transcriber
+$ git clone https://github.com/ggerganov/whisper.cpp.git
+$ cd whisper.cpp 
+$ make
+$ ./models/download-ggml-model.sh base.en
+```
+
+**Build transcriber function**
+
+```
 $ make image
 ```
 
@@ -428,7 +437,7 @@ $ make update-lambda-config
 
 ### Configure CI/CD Pipeline
 
-🪲 Currently debugging whisper.cpp cross-compilation error when using CodeBuild EC2 compute instances (AL2023, Ubuntu) and deploying to lambda. Transcription fails with error: `Illegal instruction (core dumped) | ./whisper.cpp/main -m whisper.cpp/models/ggml-base.en.bin -f - > "$output_file"`
+🪲 Currently debugging whisper.cpp cross-compilation error when using CodeBuild EC2 compute instances (AL2023, Ubuntu) and deploying to lambda. Transcription fails with error: `Illegal instruction (core dumped) | ./main -m models/ggml-base.en.bin -f - > "$output_file"`
 
 **Create policy `codebuild-transcribe-policy`**
 

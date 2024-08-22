@@ -18,7 +18,7 @@ WORKDIR ${LAMBDA_TASK_ROOT}
 
 ## Install dependencies
 RUN dnf update -y && \
-      dnf install -y git make clang xz tar wget
+      dnf install -y make clang xz tar wget
 
 # Install ffmpeg from source
 RUN wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.tar.xz && \
@@ -27,15 +27,14 @@ RUN wget https://johnvansickle.com/ffmpeg/releases/ffmpeg-release-amd64-static.t
     ln -sf /usr/local/bin/ffmpeg/ffmpeg*/ffmpeg /usr/bin/ffmpeg && \
     rm ffmpeg-release-amd64-static.tar.xz && rm -rf ffmpeg-*-amd64-static
 
-# Install whisper-cpp
-RUN git clone https://github.com/ggerganov/whisper.cpp.git && cd whisper.cpp && make
-
-# Download base model to ./whisper.cpp/models
-RUN ./whisper.cpp/models/download-ggml-model.sh base.en
-
-# Copy transcribe-fxn binary & shell script
+# Copy transcriber binary & shell script
 COPY --from=builder /usr/src/app/target/release/transcriber /usr/local/bin/transcriber
 COPY --from=builder /usr/src/app/transcribe.sh ./transcribe.sh
+
+# Copy core whisper.cpp files
+COPY --chmod=777 whisper.cpp/main ./main
+COPY --chmod=777 whisper.cpp/models/ggml-base.en.bin ./models/ggml-base.en.bin
+COPY --chmod=777 whisper.cpp/samples ./samples
 
 # Define entrypoint
 ENTRYPOINT ["/usr/local/bin/transcriber"]

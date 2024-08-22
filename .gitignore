@@ -13,4 +13,5 @@ target/
 .env
 
 # Artifacts
+*whisper.cpp
 done.txt

@@ -17,7 +17,6 @@ phases:
       - echo "[transcribe-lambda-dev]" > ~/.aws/credentials
       - echo "aws_access_key_id=$ACCESS_KEY" >> ~/.aws/credentials
       - echo "aws_secret_access_key=$SECRET_KEY" >> ~/.aws/credentials
-      - ENV=prod make ecr-login
   build:
     commands:
       - echo "Build & Deploy Listener"
@@ -28,7 +27,12 @@ phases:
       - ENV=prod make deploy-zip
       - echo "Build & Deploy Transcriber"
       - cd ../transcriber
-      - chmod 755 transcribe.sh
+      - git clone https://github.com/ggerganov/whisper.cpp.git && cd whisper.cpp && make
+      - ./models/download-ggml-model.sh base.en
+      - cd ..
+      - ls
+      - chmod 777 ./transcribe.sh
+      - ENV=prod make ecr-login
       - ENV=prod make image
       - ENV=prod make ecr-push
       - ENV=prod make update-lambda-code

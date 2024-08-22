@@ -10,9 +10,6 @@ fi
 # check ffmpeg version
 echo "ffmpeg version: $(ffmpeg -version)"
 
-# check whisper version
-echo "whisper probe: $(./var/task/whisper.cpp/main)"
-
 # i.e. /tmp/videos
 vid_dir=$1
 echo "Input directory: $vid_dir"
@@ -40,7 +37,7 @@ for video in $(find "$vid_dir" -name '*.mp4'); do
   output_file="$output_dir/$sub_dirs/$filename.txt"
 
   # Perform the transcription and save the output
-  ffmpeg -loglevel error -i "$video" -f wav -ac 1 -acodec pcm_s16le -ar 16000 - | ./whisper.cpp/main -m whisper.cpp/models/ggml-base.en.bin -f - > "$output_file"
+  ffmpeg -loglevel error -i "$video" -f wav -ac 1 -acodec pcm_s16le -ar 16000 - | ./main -m models/ggml-base.en.bin -f - > "$output_file"
 
   echo "Transcription saved to $output_file"
 done
