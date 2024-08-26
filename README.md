@@ -9,6 +9,16 @@ The workflow consists of 3 core elements:
 2. Serverless transcription pipeline (Lambda + Step Functions)
 3. CI/CD Pipeline (CodeBuild + CodePipeline)
 
+**🪲 Bugs:**
+
+Debugging whisper.cpp cross-compilation error when using CodeBuild EC2 compute instances (AL2023, Ubuntu) and deploying to lambda. Transcription fails with error: `Illegal instruction (core dumped) | ./main -m models/ggml-base.en.bin -f - > "$output_file"`. Works on local Ubuntu 20.04 x86_64. 
+
+Things I've tried: 
+
+* Confirmed matching architecture/avx compatibility/gcc --enable-default-pie for local vs codebuild
+* Tested build on all standard CodeBuild x86_64 Amazon Linux 2023 and Ubuntu runtime images
+* Compiled whisper.cpp on codebuild lambda compute matching deployment container
+
 ---
 
 ## Getting Started
@@ -436,8 +446,6 @@ $ make update-lambda-config
 --- 
 
 ### Configure CI/CD Pipeline
-
-🪲 Currently debugging whisper.cpp cross-compilation error when using CodeBuild EC2 compute instances (AL2023, Ubuntu) and deploying to lambda. Transcription fails with error: `Illegal instruction (core dumped) | ./main -m models/ggml-base.en.bin -f - > "$output_file"`
 
 **Create policy `codebuild-transcribe-policy`**
 
